@@ -7,15 +7,23 @@ import * as yup from 'yup';
 import { postUsers } from '@/lib/user';
 import { regions } from '@/lib/region';
 
+type RegionKeys = keyof typeof regions;
+type KotaKeys<Provinsi extends RegionKeys> = keyof (typeof regions)[Provinsi];
 export default function FormField() {
-  const [provinsi, setProvinsi] = useState<string>('');
+  const [provinsi, setProvinsi] = useState<RegionKeys | ''>('');
   const [kota, setKota] = useState<string>('');
   const [kecamatan, setKecamatan] = useState<string>('');
 
-  // Derive options based on selected provinsi and kota
   const provinsiOptions = Object.keys(regions);
-  const kotaOptions = provinsi ? Object.keys(regions[provinsi]) : [];
-  const kecamatanOptions = kota ? regions[provinsi][kota] : [];
+  const kotaOptions = provinsi
+    ? (Object.keys(regions[provinsi]) as Array<KotaKeys<typeof provinsi>>)
+    : [];
+
+  // Ensure correct typing for kecamatan options
+  const kecamatanOptions =
+    provinsi && kota
+      ? regions[provinsi][kota as KotaKeys<typeof provinsi>]
+      : [];
 
   const FormSchema = yup.object().shape({
     nama: yup.string().max(256).required('Nama harus diisi'),
@@ -86,20 +94,23 @@ export default function FormField() {
                       name="provinsi"
                       className="input input-bordered w-full"
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                        const selectedProvinsi = e.target.value;
+                        const selectedProvinsi = e.target.value as
+                          | RegionKeys
+                          | '';
                         setFieldValue('provinsi', selectedProvinsi);
                         setProvinsi(selectedProvinsi);
                         setKota('');
                         setKecamatan('');
                       }}
                     >
-                      <option value="">Select Provinsi</option>
+                      <option value="">Select Province</option>
                       {provinsiOptions.map((prov) => (
                         <option key={prov} value={prov}>
                           {prov}
                         </option>
                       ))}
                     </Field>
+
                     <ErrorMessage
                       component="div"
                       name="provinsi"
@@ -154,7 +165,7 @@ export default function FormField() {
                       disabled={!kota}
                     >
                       <option value="">Select Kecamatan</option>
-                      {kecamatanOptions.map((kec: any) => (
+                      {kecamatanOptions.map((kec: string) => (
                         <option key={kec} value={kec}>
                           {kec}
                         </option>
@@ -166,6 +177,7 @@ export default function FormField() {
                       className="text-error mt-1"
                     />
                   </div>
+
                   {/* Alamat */}
                   <div className="form-control mb-4">
                     <label htmlFor="alamat" className="label">
